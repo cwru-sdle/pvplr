@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pvplr"
+dependencies = [
+    'numpy',
+    'pandas',
+    'matplotlib',
+    'scipy']
+license = { text = "BSD-2-Clause" }
+version = "2024.06.12"
+
+#[tool.setuptools]
+#py-modules = ['pvplr']
+
+[tool.setuptools.packages.find]
+include = ["pvplr*"]
