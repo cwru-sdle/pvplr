@@ -11,10 +11,9 @@ class PLRDetermination:
         """
         Initialize PlRDetermination Object
         """
-            
+
         pass
 
-    # Normal y=mx+b equation
     def line(self, x_data, m, b):
         """
         Helper function that outputs a simple linear relationship for given paramaters and x-values

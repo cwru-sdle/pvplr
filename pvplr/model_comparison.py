@@ -437,7 +437,7 @@ class PLRModel:
 
         return res_dfs
     
-    # 
+     
     def plr_6k_model(self, df, var_list, by, nameplate_power, data_cutoff, predict_data):
         """
         6k - groups data by time interval and performs a linear regression according to the formula:

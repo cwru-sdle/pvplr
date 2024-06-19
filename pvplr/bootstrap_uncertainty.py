@@ -6,7 +6,7 @@ from scipy.stats import t
 import pandas as pd
 import numpy as np
 
-# Creat Processing OBject -------------------------------------------------------
+# Create Processing Object -------------------------------------------------------
 processor = PLRProcessor()
 
 # Create Comparison Object ------------------------------------------------------
@@ -18,10 +18,23 @@ determination = PLRDetermination()
 class PLRBootstrap:
 
     def __init__(self):
+        """
+        Initialize PlRBootstrap Object
+        """
+
         pass
 
-    # Helper function that returns proper per_year number
     def get_per_year(self, by):
+        """
+        Helper function that returns the proper per_year number based on the time interval.
+
+        Args:
+            by (str): The time interval ('day', 'week', 'month').
+
+        Returns:
+            int: The corresponding per_year number (365 for 'day', 52 for 'week', 12 for 'month', 0 for invalid input).
+        """
+
         if by == "day":
             return 365
         elif by == "week":
@@ -31,23 +44,56 @@ class PLRBootstrap:
         else:
             return 0  # Catches Errors
 
-    # Helper function that returns dataframe after raw data goes through the correct model
     def pick_model(self, model, df, var_list, by, data_cutoff, pred, nameplate_power):
-            if model == "xbx":
-                res = model_comparison.plr_xbx_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-            elif model == "correction":
-                res = model_comparison.plr_xbx_utc_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-            elif model == "pvusa":
-                res = model_comparison.plr_pvusa_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-            elif model == "6k":
-                res = model_comparison.plr_6k_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, nameplate_power=nameplate_power, predict_data=pred)
-            else:
-                raise ValueError("Error: model not recognized. See method documentation for plr_bootstrap_uncertainty")
-            
-            return res
+        """
+        Helper function that returns a DataFrame after the raw data goes through the correct model.
+
+        Args:
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            df (pd.DataFrame): The input DataFrame.
+            var_list (dict): A dictionary containing the variable names.
+            by (str): The time interval for grouping the data.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            pred (pd.DataFrame): The DataFrame containing the predicted data.
+            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame after applying the specified model.
+
+        Raises:
+            ValueError: If an invalid model name is provided.
+        """
+
+        if model == "xbx":
+            res = model_comparison.plr_xbx_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
+        elif model == "correction":
+            res = model_comparison.plr_xbx_utc_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
+        elif model == "pvusa":
+            res = model_comparison.plr_pvusa_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
+        elif model == "6k":
+            res = model_comparison.plr_6k_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, nameplate_power=nameplate_power, predict_data=pred)
+        else:
+            raise ValueError("Error: model not recognized. See method documentation for plr_bootstrap_uncertainty")
+        
+        return res
 
     # Helper function that returns random fraction sample of data
     def mbm_resample(self, df, fraction, by):
+        """
+        Helper function that returns a random fraction sample of data.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+
+        Returns:
+            pd.DataFrame: The resampled DataFrame.
+
+        Raises:
+            ValueError: If an invalid 'by' parameter is provided.
+        """
+
         if by == "month":
             groupby_var = 'psem'
         elif by == "week":
@@ -82,8 +128,27 @@ class PLRBootstrap:
         
         return re
             
-    # Bootstraps raw data and puts it through modeling and PLR determination
     def plr_bootstrap_uncertainty(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+        """
+        Bootstraps raw data and puts it through modeling and PLR determination.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            n (int): The number of bootstrap iterations.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            var_list (dict): A dictionary containing the variable names.
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
+            pred (pd.DataFrame): The DataFrame containing the predicted data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with PLR and error estimates.
+        """
+
         per_year = self.get_per_year(by)
         
         roc_df = pd.DataFrame(columns=['reg', 'yoy'])
@@ -119,8 +184,27 @@ class PLRBootstrap:
         
         return result
 
-    # First puts raw data through modeling and bootstraps that data
     def plr_bootstrap_output(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+        """
+        First puts raw data through modeling and then bootstraps that data.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            n (int): The number of bootstrap iterations.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            var_list (dict): A dictionary containing the variable names.
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
+            pred (pd.DataFrame): The DataFrame containing the predicted data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with PLR and error estimates.
+        """
+
         mod_res = self.pick_model(model=model, df=df, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred, nameplate_power=nameplate_power)
 
         if model == '6k':
@@ -159,9 +243,24 @@ class PLRBootstrap:
 
         return fin
 
-    # Bootstraps the result after data went through power models
-    # Inputted dataframe should be the one after passing through the model
     def plr_bootstrap_output_from_results(self, df, n, fraction, model, by, power_var, time_var, weight_var):
+        """
+        Bootstraps the result after data went through power models.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame (should be the one after passing through the model).
+            n (int): The number of bootstrap iterations.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            weight_var (str): The name of the weight variable column.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with PLR and error estimates.
+        """
+
         per_year = self.get_per_year(by)
 
         res = pd.DataFrame(columns=['reg', 'yoy'])
@@ -194,4 +293,5 @@ class PLRBootstrap:
 
         return fin
 
+bootstrap = PLRBootstrap()
 

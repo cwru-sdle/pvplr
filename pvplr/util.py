@@ -1,7 +1,6 @@
 import requests
 import os
 
-# Auto download RTC Data function
 def RTC_download(output_file, output_dir):
     """
     Helper function that downloads CSV file from OSF Database
@@ -22,4 +21,5 @@ def RTC_download(output_file, output_dir):
 
     print(f"CSV file downloaded as {output_file}")
 
-RTC_download('lwcb907.csv', '/home/ssk213/CSE_MSE_RXF131/cradle-members/sdle/ssk213/git/pvplr-suraj')
+# Example
+# RTC_download('lwcb907.csv', '/home/ssk213/CSE_MSE_RXF131/cradle-members/sdle/ssk213/git/pvplr-suraj-2')
