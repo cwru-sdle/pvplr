@@ -10,10 +10,25 @@ import matplotlib.pyplot as plt
 class PLRModel: 
     
     def __init__(self):
+        """
+        Initialize the PLRModel instance.
+        """
+
         pass
 
-    # Helper function to initialize model dataframe
     def model_initialization(self, df, var_list, by):
+        """
+        Helper function to initialize model dataframe
+
+        Args: 
+            df (pd.DataFrame): The input dataframe
+            var_list (dict): Dictionary of all named variables
+            by (string): Specifies what to separate data by (day, week, month)
+
+        Returns:
+            pd.DataFrame: Initialized Dataframe
+        """
+
         data = pd.DataFrame(df)
 
         if var_list["wind_var"] is None:
@@ -35,8 +50,19 @@ class PLRModel:
 
         return model_df
 
-    # Helper function to generate predicted data or assign dataframe to pred input
     def generate_predicted_data(self, model_df, var_list, predict_data):
+        """
+        Generate predicted data or assign DataFrame to pred input.
+
+        Args:
+            model_df (pd.DataFrame): The input DataFrame containing the model data.
+            var_list (dict): A dictionary containing the variable names.
+            predict_data (pd.DataFrame, optional): The DataFrame containing the predict data. Defaults to None.
+
+        Returns:
+            pd.DataFrame: The predicted data DataFrame.
+        """
+
         if predict_data is None:
             n = model_df.groupby("tvar").size().reset_index(name="n")
             pred = []
@@ -95,9 +121,22 @@ class PLRModel:
 
         return pred   
 
-    # Xbx - groups data by the specified time interval and performs a linear regression 
-    # using the formula: P_{pred = beta_0 + beta_1*G + beta_2*T + epsilon.
     def plr_xbx_model(self, df, var_list, by, data_cutoff, predict_data): 
+        """
+        Xbx - groups data by the specified time interval and performs a linear regression 
+        using the formula: P_pred = beta_0 + beta_1*G + beta_2*T + epsilon.
+
+        Args:
+        df (pd.DataFrame): The input DataFrame.
+        var_list (dict): A dictionary containing the variable names.
+        by (str): The time interval to group the data by ('month', 'week', 'day').
+        data_cutoff (int): The minimum number of data points required for each time period.
+        predict_data (pd.DataFrame): The DataFrame containing the predict data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with the Xbx model predictions and metrics.
+        """
+
         # initialize dataframes from helper function above
         model_df = self.model_initialization(df=df, var_list=var_list, by=by)
 
@@ -120,7 +159,6 @@ class PLRModel:
 
         # Iterate over each DataFrame in the list
         for i, df in enumerate(grouped_dfs, start=0):
-            
             mod = model_df[start:end]
             start = end
             end = end + n["n"][i]
@@ -131,6 +169,10 @@ class PLRModel:
             else:
                 X = mod[['irrad_var', 'temp_var']]
             y = mod['power_var']
+            
+            # To prevent UndefinedMetricWarning: R^2 score is not well-defined with less than two samples.
+            if len(X) < 2:
+                continue
 
             # Create a linear regression model
             model = linear_model.LinearRegression()
@@ -175,11 +217,26 @@ class PLRModel:
 
         return res_dfs
     
-    # Xbx-UTC - groups data by the specified time interval and performs a linear regression 
-    # using the formula: power_corr ~ irrad_var - 1. Predicted values of irradiance, 
-    # temperature, and wind speed (if applicable) are added for reference. The function uses 
-    # a universal temperature correction, rather than the monthly regression correction 
-    def plr_xbx_utc_model(self, df, var_list, data_cutoff, predict_data, by="month", ref_irrad=900, irrad_range=10):
+    def plr_xbx_utc_model(self, df, var_list, data_cutoff, predict_data, by, ref_irrad=900, irrad_range=10):
+        """
+        Xbx-UTC - groups data by the specified time interval and performs a linear regression
+        using the formula: power_corr ~ irrad_var - 1. Predicted values of irradiance,
+        temperature, and wind speed (if applicable) are added for reference. The function uses
+        a universal temperature correction, rather than the monthly regression correction.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            var_list (dict): A dictionary containing the variable names.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            predict_data (pd.DataFrame): The DataFrame containing the predict data.
+            by (str): The time interval to group the data by ('month', 'week', 'day'). 
+            ref_irrad (int): The reference irradiance value. Defaults to 900.
+            irrad_range (int): The range around the reference irradiance value. Defaults to 10.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with the Xbx-UTC model predictions and metrics.
+        """
+
         # initialize dataframes from helper function above
         model_df = self.model_initialization(df=df, var_list=var_list, by=by)
 
@@ -234,6 +291,10 @@ class PLRModel:
 
                 X = mod['irrad_var'].values.reshape(-1, 1)
                 y = power_corr.reshape(-1, 1)
+
+                # To prevent UndefinedMetricWarning: R^2 score is not well-defined with less than two samples.
+                if len(X) < 2:
+                    continue
                 
                 model = linear_model.LinearRegression(fit_intercept=False)
                 model.fit(X, y)
@@ -272,10 +333,23 @@ class PLRModel:
         )[['time_var', 'power_var', 'std_error', 'sigma', 'outlier']]
 
         return res_dfs
-
-    # PVUSA - a physics-based model that groups data and performs a linear regression according to
-    # the formula P = G_POA * (beta_{0} + beta_{1}*G + beta_{2}*T_{amb} + beta_{3}*W
+ 
     def plr_pvusa_model(self, df, var_list, by, data_cutoff, predict_data):
+        """
+        PVUSA - a physics-based model that groups data and performs a linear regression according to
+        the formula P = G_POA * (beta_{0} + beta_{1}*G + beta_{2}*T_{amb} + beta_{3}*W
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            var_list (dict): A dictionary containing the variable names.
+            by (str): The time interval to group the data by ('month', 'week', 'day'). 
+            data_cutoff (int): The minimum number of data points required for each time period.
+            predict_data (pd.DataFrame): The DataFrame containing the predict data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with the PVUSA model predictions and metrics.
+        """
+
         # initialize dataframes from helper function above
         model_df = self.model_initialization(df=df, var_list=var_list, by=by)
 
@@ -320,6 +394,10 @@ class PLRModel:
             X = irrad_corr.reshape(-1, 1)
             y = mod['power_var'].values.reshape(-1, 1)
 
+            # To prevent UndefinedMetricWarning: R^2 score is not well-defined with less than two samples.
+            if len(X) < 2:
+                continue
+
             # Create a linear regression model
             model = linear_model.LinearRegression()
             # Fit the model to the data
@@ -359,11 +437,29 @@ class PLRModel:
 
         return res_dfs
     
-    # 6k - groups data by time interval and performs a linear regression according to the
-    # formula: power_var ~ irrad_var/istc * (nameplate_power + a*log(irrad_var/istc) + 
-    # b*log(irrad_var/istc)^2 + c*(temp_var - tref) + d*(temp_var - tref)*log(irrad_var/istc) + 
-    # e*(temp_var - tref)*log(irrad_var/istc)^2 + f*(temp_var - tref)^2).
+    # 
     def plr_6k_model(self, df, var_list, by, nameplate_power, data_cutoff, predict_data):
+        """
+        6k - groups data by time interval and performs a linear regression according to the formula:
+          power_var ~ irrad_var/istc * (nameplate_power + a*log(irrad_var/istc) 
+                                                        + b*log(irrad_var/istc)^2 
+                                                        + c*(temp_var - tref) 
+                                                        + d*(temp_var - tref)*log(irrad_var/istc) 
+                                                        + e*(temp_var - tref)*log(irrad_var/istc)^2 
+                                                        + f*(temp_var - tref)^2)
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            var_list (dict): A dictionary containing the variable names.
+            by (str): The time interval to group the data by ('month', 'week', 'day'). 
+            nameplate_power (int): The rated power capability of the system, in watts.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            predict_data (pd.DataFrame): The DataFrame containing the predict data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with the PVUSA model predictions and metrics.
+        """
+
         # initialize dataframes from helper function above
         model_df = self.model_initialization(df=df, var_list=var_list, by=by)
 
@@ -457,25 +553,3 @@ class PLRModel:
         )[['time_var', 'power_var', 'std_error', 'sigma', 'outlier']]
 
         return res_dfs
-
-'''
-# DATA CLEANING ------------------------------------------------------
-processor = PLRProcessor()
-var_list = processor.plr_build_var_list(time_var='tmst', power_var='idcp', irrad_var='poay', temp_var='modt', wind_var='wspa')
-RTC_DATA_PATH = "/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/c10hov6.csv"
-dataf = pd.read_csv(RTC_DATA_PATH)
-df = processor.plr_cleaning(df=dataf, var_list=var_list, irrad_thresh=800, low_power_thresh=0.05, high_power_cutoff=None)
-fdf = processor.plr_saturation_removal(df=df, var_list=var_list)
-
-# DATA MODELING ------------------------------------------------------
-model = PLRModel()
-m = model.plr_pvusa_model(df=fdf, var_list=var_list, by='week', data_cutoff=30, predict_data=None)
-model_no_outliers = processor.plr_remove_outlier(m)
-print(model_no_outliers[0:60])
-
-plt.scatter(model_no_outliers['time_var'], model_no_outliers['power_var'], color='grey')
-plt.ylim(0, 4)
-plt.grid(True)
-plt.savefig('PVUSA_PLR.png')
-'''
-
