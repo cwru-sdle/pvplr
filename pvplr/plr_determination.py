@@ -2,75 +2,115 @@
 #from pvplr.model_comparison import PLRModel
 import pandas as pd
 import numpy as np
-from scipy.optimize import curve_fit
-from sklearn import linear_model
+from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
 class PLRDetermination:
 
     def __init__(self):
+        """
+        Initialize PlRDetermination Object
+        """
+
         pass
 
-    # Normal y=mx+b equation
     def line(self, x_data, m, b):
+        """
+        Helper function that outputs a simple linear relationship for given paramaters and x-values
+
+        Args:
+            x_data (array): input data
+            m (float): slope
+            b (float): y-intercept
+        
+        Returns:
+            float: output data from linear equation
+        """
+
         return (m*x_data) + b
 
-    # Returns standard deviation of PLR value (not needed now since scipy package is used below)
-    def plr_var(self, mod, X, y, per_year):
+    def plr_var(self, mod, x, y, per_year):
+        """
+        Calculate the standard deviation of the PLR value 
+
+        Args:
+            mod (LinearRegression object): The fitted linear regression model.
+            X (array): The input features.
+            y (array): The target values.
+            per_year (float): The percentage per year.
+
+        Returns:
+            float: The standard deviation of the PLR value as a percentage.
+        """
+
         m = mod.coef_[0]
-        y_intercept = mod.intercept_
-        
+        y_int = mod.intercept_
+
         # Calculate the residuals
-        residuals = mod.predict(X) - y
+        residuals = mod.predict(x) - y
         
         # Calculate the residual sum of squares
         rss = np.sum(residuals**2)
         
         # Calculate the degrees of freedom
-        n = len(y)
-        p = len(mod.coef_)
-        dof = n - p
+        dof = len(y) - 2
         
         # Calculate the mean squared error
         mse = rss / dof
-        
+
         # Calculate the covariance matrix
-        cov_matrix = mse * np.linalg.inv(np.dot(X.T, X))
-        
-        m_var = cov_matrix[0, 0]
-        y_var = cov_matrix[0, 0]  # Use the same variance as m_var
-        
-        u = np.sqrt((per_year / y_intercept) ** 2 * m_var + ((-per_year * m) / y_intercept ** 2) ** 2 * y_var)
-        
+        X = np.hstack((np.ones((len(y), 1)), x))
+        cov_matrix = np.linalg.inv(np.dot(X.T, X)) * mse
+
+        # Extract the variances of the slope and intercept coefficients
+        var_slope = cov_matrix[1, 1]
+        var_intercept = cov_matrix[0, 0]
+
+        # Calculate the standard deviation of the PLR using the delta method
+        u = np.sqrt((per_year / y_int)**2 * var_slope + ((-per_year * m) / y_int**2)**2 * var_intercept)
+
         return u * 100
 
-    # Calculates Performance Loss Rate (PLR) using weighted linear regression with input from power predictive model
     def plr_weighted_regression(self, data, power_var, time_var, model, per_year, weight_var):
+        """
+        Calculate the Performance Loss Rate (PLR) using weighted linear regression with input from power predictive model.
+
+        Args:
+            data (pd.DataFrame): The input data after modeling.
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            model (str): The name of the model (Xbx, Xbx-UTC, or PVUSA).
+            per_year (float): The number of time units for that by variable per year (ex. 52 for 'week')
+            weight_var (str, optional): The name of the weight variable column. If None, unweighted regression is used.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the PLR, error, slope, y-intercept, model, and method.
+        """
+
         data = pd.DataFrame(data)
         data['pvar'] = data[power_var]
         data['tvar'] = data[time_var]
         
-        x = data['tvar']
-        y = data['pvar'] 
-            
+        x = data['tvar'].values.reshape(-1,1)
+        y = data['pvar'].values
+
+        # Create a LinearRegression object
+        reg = LinearRegression()
+
         if weight_var is None:
-            popt, pcov = curve_fit(self.line, x, y, p0 = [-2,2500], nan_policy = 'omit')
+            reg.fit(x, y)
         else:
             data['wvar'] = data[weight_var]
-            popt, pcov = curve_fit(self.line, x, y, p0 = [-2,2500], sigma=data['sigma'], nan_policy = 'omit')
-        
-        m, c = popt
-        # Calculate the error using the covariance matrix
-        m_err = np.sqrt(pcov[0, 0])
-        c_err = np.sqrt(pcov[1, 1])
-        
+            reg.fit(x, y, sample_weight=data['wvar'])
+
+        m = reg.coef_[0]
+        c = reg.intercept_
+
         # Rate of Change is slope/intercept converted to %/year
         roc = (m / c) * per_year * 100
-        
-        # Calculate the error in ROC using error propagation
-        #print((per_year, c, m_err, m, c_err))
-        #print(pcov)
-        roc_err = np.sqrt( (per_year / c)**2 * m_err**2 + (-per_year * m / c**2)**2 * c_err**2) * 100
+
+        # Calculate the error using the plr_var function
+        roc_err = self.plr_var(reg, x, y, per_year)
         
         # Make roc into a DataFrame
         roc_df = pd.DataFrame({'plr': [roc], 
@@ -86,8 +126,23 @@ class PLRDetermination:
         
         return roc_df
 
-    # Calculates Performance Loss Rate (PLR) with power data separated by one year 
     def plr_yoy_regression(self, data, power_var, time_var, model, per_year, return_PLR):
+        """
+        Calculate the Performance Loss Rate (PLR) with power data separated by one year.
+
+        Args:
+            data (pd.DataFrame): The input data after modeling.
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            model (str): The name of the model (Xbx, Xbx-UTC, or PVUSA).
+            per_year (int): The number of time units per year (ex. 52 for 'week').
+            return_PLR (bool): If True, returns the PLR DataFrame. If False, returns the slope data.
+
+        Returns:
+            pd.DataFrame: If return_PLR is True, returns a DataFrame containing the PLR, PLR standard deviation,
+                        model, slope, y-intercept, and method. If return_PLR is False, returns the slope data.
+        """
+
         data = pd.DataFrame(data)
         data['pvar'] = data[power_var]
         data['tvar'] = data[time_var]
@@ -105,7 +160,7 @@ class PLRDetermination:
             if not df.isnull().any().any() and len(df) == 2:
                 X = df['tvar'].values.reshape(-1, 1)
                 y = df['pvar'].values.reshape(-1, 1)
-                mod = linear_model.LinearRegression()
+                mod = LinearRegression()
                 reg = mod.fit(X, y)
 
                 # Pull out the slope and intercept of the model
@@ -137,7 +192,7 @@ class PLRDetermination:
                             'y-int': b,
                             'method': 'year-on-year'})
 
-            # Return ROC or res based on return_PLR
+            # Return ROC or res based on return_PLR input
             if return_PLR:
                 return roc_df
             else:

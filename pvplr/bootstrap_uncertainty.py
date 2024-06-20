@@ -6,7 +6,7 @@ from scipy.stats import t
 import pandas as pd
 import numpy as np
 
-# Creat Processing OBject -------------------------------------------------------
+# Create Processing Object -------------------------------------------------------
 processor = PLRProcessor()
 
 # Create Comparison Object ------------------------------------------------------
@@ -18,10 +18,23 @@ determination = PLRDetermination()
 class PLRBootstrap:
 
     def __init__(self):
+        """
+        Initialize PlRBootstrap Object
+        """
+
         pass
 
-    # Helper function that returns proper per_year number
     def get_per_year(self, by):
+        """
+        Helper function that returns the proper per_year number based on the time interval.
+
+        Args:
+            by (str): The time interval ('day', 'week', 'month').
+
+        Returns:
+            int: The corresponding per_year number (365 for 'day', 52 for 'week', 12 for 'month', 0 for invalid input).
+        """
+
         if by == "day":
             return 365
         elif by == "week":
@@ -31,23 +44,56 @@ class PLRBootstrap:
         else:
             return 0  # Catches Errors
 
-    # Helper function that returns dataframe after raw data goes through the correct model
     def pick_model(self, model, df, var_list, by, data_cutoff, pred, nameplate_power):
-            if model == "xbx":
-                res = model_comparison.plr_xbx_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-            elif model == "correction":
-                res = model_comparison.plr_xbx_utc_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-            elif model == "pvusa":
-                res = model_comparison.plr_pvusa_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-            elif model == "6k":
-                res = model_comparison.plr_6k_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, nameplate_power=nameplate_power, predict_data=pred)
-            else:
-                raise ValueError("Error: model not recognized. See method documentation for plr_bootstrap_uncertainty")
-            
-            return res
+        """
+        Helper function that returns a DataFrame after the raw data goes through the correct model.
+
+        Args:
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            df (pd.DataFrame): The input DataFrame.
+            var_list (dict): A dictionary containing the variable names.
+            by (str): The time interval for grouping the data.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            pred (pd.DataFrame): The DataFrame containing the predicted data.
+            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame after applying the specified model.
+
+        Raises:
+            ValueError: If an invalid model name is provided.
+        """
+
+        if model == "xbx":
+            res = model_comparison.plr_xbx_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
+        elif model == "correction":
+            res = model_comparison.plr_xbx_utc_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
+        elif model == "pvusa":
+            res = model_comparison.plr_pvusa_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
+        elif model == "6k":
+            res = model_comparison.plr_6k_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, nameplate_power=nameplate_power, predict_data=pred)
+        else:
+            raise ValueError("Error: model not recognized. See method documentation for plr_bootstrap_uncertainty")
+        
+        return res
 
     # Helper function that returns random fraction sample of data
     def mbm_resample(self, df, fraction, by):
+        """
+        Helper function that returns a random fraction sample of data.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+
+        Returns:
+            pd.DataFrame: The resampled DataFrame.
+
+        Raises:
+            ValueError: If an invalid 'by' parameter is provided.
+        """
+
         if by == "month":
             groupby_var = 'psem'
         elif by == "week":
@@ -82,8 +128,27 @@ class PLRBootstrap:
         
         return re
             
-    # Bootstraps raw data and puts it through modeling and PLR determination
     def plr_bootstrap_uncertainty(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+        """
+        Bootstraps raw data and puts it through modeling and PLR determination.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            n (int): The number of bootstrap iterations.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            var_list (dict): A dictionary containing the variable names.
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
+            pred (pd.DataFrame): The DataFrame containing the predicted data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with PLR and error estimates.
+        """
+
         per_year = self.get_per_year(by)
         
         roc_df = pd.DataFrame(columns=['reg', 'yoy'])
@@ -119,8 +184,27 @@ class PLRBootstrap:
         
         return result
 
-    # First puts raw data through modeling and bootstraps that data
     def plr_bootstrap_output(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+        """
+        First puts raw data through modeling and then bootstraps that data.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            n (int): The number of bootstrap iterations.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            var_list (dict): A dictionary containing the variable names.
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            data_cutoff (int): The minimum number of data points required for each time period.
+            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
+            pred (pd.DataFrame): The DataFrame containing the predicted data.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with PLR and error estimates.
+        """
+
         mod_res = self.pick_model(model=model, df=df, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred, nameplate_power=nameplate_power)
 
         if model == '6k':
@@ -159,9 +243,24 @@ class PLRBootstrap:
 
         return fin
 
-    # Bootstraps the result after data went through power models
-    # Inputted dataframe should be the one after passing through the model
     def plr_bootstrap_output_from_results(self, df, n, fraction, model, by, power_var, time_var, weight_var):
+        """
+        Bootstraps the result after data went through power models.
+
+        Args:
+            df (pd.DataFrame): The input DataFrame (should be the one after passing through the model).
+            n (int): The number of bootstrap iterations.
+            fraction (float): The fraction of data to be sampled (between 0 and 1).
+            model (str): The name of the model ('xbx', 'correction', 'pvusa', '6k').
+            by (str): The time interval for grouping the data ('month', 'week', or 'day').
+            power_var (str): The name of the power variable column.
+            time_var (str): The name of the time variable column.
+            weight_var (str): The name of the weight variable column.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with PLR and error estimates.
+        """
+
         per_year = self.get_per_year(by)
 
         res = pd.DataFrame(columns=['reg', 'yoy'])
@@ -196,75 +295,3 @@ class PLRBootstrap:
 
 bootstrap = PLRBootstrap()
 
-'''
- 
-'''
-
-# NM1, NM2, V1, V2, F1, F2 
-AREAS = ["/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/c10hov6.csv", 
-        "/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/t3pg1sv.csv",
-        "/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/luemkoy.csv",
-        "/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/lwcb907.csv",
-        "/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/wca0c5m.csv",
-        "/home/ssk213/CSE_MSE_RXF131/vuv-data/proj/IEA-PVPS-T13/DOE-RTC-Baseline-datashare/z0aygry.csv"]
-IRRAD_THRESH = [0, 200, 800]
-MODELS = ["xbx", "correction", "pvusa"]
-
-var_list = processor.plr_build_var_list(time_var='tmst', power_var='idcp', irrad_var='poay', temp_var='modt', wind_var='wspa')
-results = pd.DataFrame(columns=['0 Reg', '200 Reg', '800 Reg', '0 YoY', '200 YoY', '800 YoY'])
-for irrad in IRRAD_THRESH:
-    print(irrad, end='\n')
-    reg_values = []
-    yoy_values = []
-    for area in AREAS:
-        dataf = pd.read_csv(area)
-        df = processor.plr_cleaning(df=dataf, var_list=var_list, irrad_thresh=irrad, low_power_thresh=0.05, high_power_cutoff=None) 
-        fdf = processor.plr_saturation_removal(df=df, var_list=var_list)
-        wbw_plr_uncertainty = bootstrap.plr_bootstrap_uncertainty(fdf, n = 10, fraction = 0.65, by = "week", power_var = 'power_var', time_var = 'time_var', var_list = var_list, model = MODELS[2], data_cutoff = 10, nameplate_power = None, pred = None)
-        print(wbw_plr_uncertainty)
-
-        reg_values.append(wbw_plr_uncertainty['error_std_dev'].iloc[0])
-        yoy_values.append(wbw_plr_uncertainty['error_std_dev'].iloc[1])
-
-    if irrad == 0:
-        results['0 Reg'] = reg_values
-        results['0 YoY'] = yoy_values
-    elif irrad == 200:
-        results['200 Reg'] = reg_values
-        results['200 YoY'] = yoy_values
-    else:
-        results['800 Reg'] = reg_values
-        results['800 YoY'] = yoy_values
-    
-    print(results)
-
-print("Making Graph...")
-
-# Create a new DataFrame for plotting
-plot_data = pd.DataFrame({
-    'Irrad': ['0', '200', '800'] * len(AREAS),
-    'Reg': results['0 Reg'].tolist() + results['200 Reg'].tolist() + results['800 Reg'].tolist(),
-    'YoY': results['0 YoY'].tolist() + results['200 YoY'].tolist() + results['800 YoY'].tolist()
-})
-
-# Create the first plot for Reg
-plt.figure(figsize=(8, 6))
-plt.boxplot([plot_data[plot_data['Irrad'] == irrad]['Reg'] for irrad in ['0', '200', '800']])
-plt.xticks(range(1, len(IRRAD_THRESH) + 1), ['0', '200', '800'])
-plt.xlabel('Irrad Threshold')
-plt.ylabel('Reg Error Standard Deviation')
-plt.title('Box and Whisker Plot - Reg Error')
-plt.tight_layout()
-plt.savefig('pvusa_reg_sd_plot.png')  # Save the plot as an image file
-plt.close()
-
-# Create the second plot for YoY
-plt.figure(figsize=(8, 6))
-plt.boxplot([plot_data[plot_data['Irrad'] == irrad]['YoY'] for irrad in ['0', '200', '800']])
-plt.xticks(range(1, len(IRRAD_THRESH) + 1), ['0', '200', '800'])
-plt.xlabel('Irrad Threshold')
-plt.ylabel('YoY Error Standard Deviation')
-plt.title('Box and Whisker Plot - YoY Error')
-plt.tight_layout()
-plt.savefig('pvusa_yoy_sd_plot.png')  # Save the plot as an image file
-plt.close()
