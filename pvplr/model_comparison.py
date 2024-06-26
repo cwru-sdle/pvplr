@@ -1,4 +1,4 @@
-#from pvplr.feature_correction import PLRProcessor
+# from pvplr.feature_correction import PLRProcessor
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -164,7 +164,7 @@ class PLRModel:
             end = end + n["n"][i]
 
             mod = mod.dropna()
-            if 'wind_var' in model_df.columns:
+            if 'wind_var' in model_df.columns and 'wind_var' in pred:
                 X = mod[['irrad_var', 'temp_var', 'wind_var']]
             else:
                 X = mod[['irrad_var', 'temp_var']]
@@ -178,7 +178,7 @@ class PLRModel:
             model = linear_model.LinearRegression()
             # Fit the model to the data
 
-            if not X.empty:
+            if not X.empty and len(X) > X.shape[1] + 1:  
                 model.fit(X, y)
 
                 # Create a new DataFrame with the results
@@ -384,7 +384,7 @@ class PLRModel:
             start = end
             end = end + n["n"][i]
             
-            if 'wind_var' in model_df.columns:
+            if 'wind_var' in model_df.columns and 'wind_var' in pred.columns:
                 irrad_corr = mod['irrad_var'].values + (mod['irrad_var'].values)**2 + (mod['irrad_var'].values * mod['temp_var'].values) + (mod['irrad_var'].values * mod['wind_var'].values)
                 pred_irrad_corr = pred['irrad_var'][i] + (pred['irrad_var'][i])**2 + (pred['irrad_var'][i] * pred['temp_var'][i]) + (pred['irrad_var'][i] * pred['wind_var'][i])
             else:

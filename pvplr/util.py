@@ -22,4 +22,4 @@ def RTC_download(output_file, output_dir):
     print(f"CSV file downloaded as {output_file}")
 
 # Example
-# RTC_download('lwcb907.csv', '/home/ssk213/CSE_MSE_RXF131/cradle-members/sdle/ssk213/git/pvplr-suraj-2')
+# RTC_download('lwcb907.csv', '/home/ssk213/CSE_MSE_RXF131/cradle-members/sdle/ssk213/git/pvplr-suraj')

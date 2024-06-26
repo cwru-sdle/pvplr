@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from statsmodels.tsa.seasonal import STL
+from sklearn.linear_model import LinearRegression
 
 class PLRProcessor:
 
@@ -119,6 +121,84 @@ class PLRProcessor:
         df = pd.DataFrame(df)
         res = df[df['outlier'] == False]
         return res
-    
 
-    
+    def plr_decomposition(self, data, by, freq, power_var, time_var, start_date, plot=False, plot_file=None, title=None, data_file=None):
+        """
+        Perform STL decomposition on time series power-predicted data.
+
+        Args:
+            data (pd.DataFrame): Input data that went through power modeling already.
+            by (string): 'D' for daily, 'W' for weekly, 'M' for monthly
+            freq (int): Frequency of the time series (usually 4).
+            power_var (str): Name of the column containing power data.
+            time_var (str): Name of the column containing time data.
+            start_date (str): Start date of the time series in timestamp format.
+            plot (bool, optional): Whether to create a plot. Defaults to False.
+            plot_file (str, optional): File path to save the plot. Defaults to None.
+            title (str, optional): Title for the plot. Defaults to None.
+            data_file (str, optional): File path to save the processed data. Defaults to None.
+
+        Returns:
+            pd.DataFrame: Processed and decomposed data.
+        """
+
+        data = pd.DataFrame(data)
+        total_age = range(1, int(data[time_var].max()) + 1)  
+        power_sum = pd.DataFrame({'total_age': total_age})
+
+        # Add corresponding power and sigma values to power_sum dataframe
+        for j in power_sum['total_age']:
+            if j in data[time_var].values:
+                mask = data[time_var] == j
+                power_sum.loc[j-1, 'power'] = data.loc[mask, power_var].values[0]
+                power_sum.loc[j-1, 'sigma'] = data.loc[mask, 'sigma'].values[0]
+            else:
+                power_sum.loc[j-1, 'power'] = None
+                power_sum.loc[j-1, 'sigma'] = None
+
+        # Remove NAs at the start and end
+        power_sum = power_sum.dropna(subset=['power'])
+
+        # Define time series object of the predicted power
+        ts_power = pd.Series(power_sum['power'].values, index=pd.date_range(start=start_date, periods=len(power_sum), freq=by))
+
+        # STL decomposition
+        stl_result = STL(ts_power, period=freq).fit()
+
+        # Create DataFrame with decomposition results
+        stl_data = pd.DataFrame({
+            'raw': ts_power,
+            'trend': stl_result.trend,
+            'seasonal': stl_result.seasonal,
+            'residual': stl_result.resid
+        })
+
+        stl_data['interpolated'] = stl_data['raw'].isna()
+        stl_data['age'] = range(1, len(stl_data) + 1)
+        stl_data['sigma'] = power_sum['sigma'].values
+        stl_data['power'] = np.where(stl_data['interpolated'], np.nan, stl_data['trend'])
+
+        if plot:
+            plt.figure(figsize=(10, 6))
+            plt.scatter(stl_data['age'], stl_data['raw'], c='blue', alpha=0.5)
+            plt.scatter(stl_data['age'], stl_data['trend'], c='red')
+            plt.ylim(0.9 * stl_data['raw'].min(), 1.1 * stl_data['raw'].max())
+            plt.xlabel(f'Age (Pseudo {by})')
+            plt.ylabel('Predicted Power (KW) Trend')
+            plt.title(title)
+            plt.savefig(plot_file)
+            plt.close()
+
+        reg = LinearRegression()
+        reg.fit(stl_data['power'].values.reshape(-1,1), stl_data['age'].values.reshape(-1,1), sample_weight=1/stl_data['sigma'])
+        m = reg.coef_[0]
+        c = reg.intercept_
+
+        # Rate of Change is slope/intercept converted to %/year
+        roc = (m / c) * 12 * 100
+        print(f'Calculated PLR for decomposed data: {roc.item():.5f}')
+
+        if data_file:
+            stl_data.to_csv(data_file, index=False)
+
+        return stl_data
