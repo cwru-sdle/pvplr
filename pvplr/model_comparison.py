@@ -1,3 +1,10 @@
+""" Power Predictive Module
+
+This file contains a class with functions for modeling PV data after data filtering. 
+There are four types of models - Xbx, Xbx-UTC, PVUSA, and 6k (this one is not used due)
+
+"""
+
 # from pvplr.feature_correction import PLRProcessor
 import pandas as pd
 import numpy as np
@@ -9,14 +16,21 @@ import matplotlib.pyplot as plt
 
 class PLRModel: 
     
-    def __init__(self):
+    def __init__(
+        self
+    ):
         """
         Initialize the PLRModel instance.
         """
 
         pass
 
-    def model_initialization(self, df, var_list, by):
+    def model_initialization(
+        self, 
+        df, 
+        var_list, 
+        by
+    ):
         """
         Helper function to initialize model dataframe
 
@@ -50,7 +64,12 @@ class PLRModel:
 
         return model_df
 
-    def generate_predicted_data(self, model_df, var_list, predict_data):
+    def generate_predicted_data(
+        self, 
+        model_df, 
+        var_list, 
+        predict_data
+    ):
         """
         Generate predicted data or assign DataFrame to pred input.
 
@@ -121,7 +140,14 @@ class PLRModel:
 
         return pred   
 
-    def plr_xbx_model(self, df, var_list, by, data_cutoff, predict_data): 
+    def plr_xbx_model(
+        self, 
+        df, 
+        var_list, 
+        by, 
+        data_cutoff, 
+        predict_data
+    ): 
         """
         Xbx - groups data by the specified time interval and performs a linear regression 
         using the formula: P_pred = beta_0 + beta_1*G + beta_2*T + epsilon.
@@ -217,7 +243,16 @@ class PLRModel:
 
         return res_dfs
     
-    def plr_xbx_utc_model(self, df, var_list, data_cutoff, predict_data, by, ref_irrad=900, irrad_range=10):
+    def plr_xbx_utc_model(
+        self, 
+        df, 
+        var_list, 
+        data_cutoff, 
+        predict_data, 
+        by, 
+        ref_irrad=900, 
+        irrad_range=10
+    ):
         """
         Xbx-UTC - groups data by the specified time interval and performs a linear regression
         using the formula: power_corr ~ irrad_var - 1. Predicted values of irradiance,
@@ -334,7 +369,14 @@ class PLRModel:
 
         return res_dfs
  
-    def plr_pvusa_model(self, df, var_list, by, data_cutoff, predict_data):
+    def plr_pvusa_model(
+        self, 
+        df, 
+        var_list, 
+        by, 
+        data_cutoff, 
+        predict_data
+    ):
         """
         PVUSA - a physics-based model that groups data and performs a linear regression according to
         the formula P = G_POA * (beta_{0} + beta_{1}*G + beta_{2}*T_{amb} + beta_{3}*W
@@ -437,8 +479,16 @@ class PLRModel:
 
         return res_dfs
     
-     
-    def plr_6k_model(self, df, var_list, by, nameplate_power, data_cutoff, predict_data):
+    '''
+    def plr_6k_model(
+        self, 
+        df, 
+        var_list, 
+        by, 
+        nameplate_power, 
+        data_cutoff,
+        predict_data
+    ):
         """
         6k - groups data by time interval and performs a linear regression according to the formula:
           power_var ~ irrad_var/istc * (nameplate_power + a*log(irrad_var/istc) 
@@ -553,3 +603,5 @@ class PLRModel:
         )[['time_var', 'power_var', 'std_error', 'sigma', 'outlier']]
 
         return res_dfs
+
+        '''

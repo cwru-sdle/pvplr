@@ -1,3 +1,9 @@
+""" Piecewise Linear PLR Module
+
+This function partitions power-predictive data into segments and calculates PLR for each segment
+
+"""
+
 from feature_correction import PLRProcessor
 from model_comparison import PLRModel
 import piecewise_regression
@@ -5,7 +11,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-def plr_seg_extract(df, n_breakpoints, per_year, power_var, time_var, return_model = False):
+def plr_seg_extract(
+    df, 
+    n_breakpoints,
+    per_year, 
+    power_var, 
+    time_var, 
+    return_model = False
+):
     """
     Perform piecewise linear regression on the given data.
 
@@ -90,7 +103,7 @@ fdf = processor.plr_saturation_removal(df=df, var_list=var_list)
 # DATA MODELING ------------------------------------------------------
 model = PLRModel()
 predict_data = pd.DataFrame({'irrad_var': [800], 'temp_var': [40], 'wind_var': [0]})  # use for Xbx only
-m = model.plr_xbx_model(df=fdf, var_list=var_list, by='week', data_cutoff=10, predict_data=predict_data) 
+m = model.plr_xbx_model(df=fdf, var_list=var_list, by='week', data_cutoff=30, predict_data=None) 
 #print(m)
 
 stl_data = processor.plr_decomposition(data=m, by='W', freq=4, start_date="2015-11-24", power_var='power_var', time_var='time_var', 
@@ -98,5 +111,5 @@ stl_data = processor.plr_decomposition(data=m, by='W', freq=4, start_date="2015-
                                         title='Xbx Daily Decomposed PLR')
 print(stl_data)
 
-seg = plr_seg_extract(df=stl_data, n_breakpoints=1, per_year=365, power_var='power', time_var='age', return_model=False)
+seg = plr_seg_extract(df=stl_data, n_breakpoints=1, per_year=52, power_var='power', time_var='age', return_model=False)
 print(seg)

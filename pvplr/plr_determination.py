@@ -1,3 +1,10 @@
+""" PLR Calculation Module
+
+This file contains a class with yoy and regression functions to calculate PLR values
+after data groes through power predictive modeling. 
+
+"""
+
 #from pvplr.feature_correction import PLRProcessor
 #from pvplr.model_comparison import PLRModel
 import pandas as pd
@@ -7,14 +14,21 @@ import matplotlib.pyplot as plt
 
 class PLRDetermination:
 
-    def __init__(self):
+    def __init__(
+        self
+    ):
         """
         Initialize PlRDetermination Object
         """
 
         pass
 
-    def line(self, x_data, m, b):
+    def line(
+        self, 
+        x_data, 
+        m, 
+        b
+    ):
         """
         Helper function that outputs a simple linear relationship for given paramaters and x-values
 
@@ -29,7 +43,13 @@ class PLRDetermination:
 
         return (m*x_data) + b
 
-    def plr_var(self, mod, x, y, per_year):
+    def plr_var(
+        self, 
+        mod, 
+        x, 
+        y, 
+        per_year
+    ):
         """
         Calculate the standard deviation of the PLR value 
 
@@ -71,7 +91,15 @@ class PLRDetermination:
 
         return u * 100
 
-    def plr_weighted_regression(self, data, power_var, time_var, model, per_year, weight_var):
+    def plr_weighted_regression(
+        self, 
+        data, 
+        power_var, 
+        time_var, 
+        model, 
+        per_year, 
+        weight_var
+    ):
         """
         Calculate the Performance Loss Rate (PLR) using weighted linear regression with input from power predictive model.
 
@@ -126,7 +154,15 @@ class PLRDetermination:
         
         return roc_df
 
-    def plr_yoy_regression(self, data, power_var, time_var, model, per_year, return_PLR):
+    def plr_yoy_regression(
+        self, 
+        data,
+        power_var, 
+        time_var, 
+        model, 
+        per_year, 
+        return_PLR
+    ):
         """
         Calculate the Performance Loss Rate (PLR) with power data separated by one year.
 

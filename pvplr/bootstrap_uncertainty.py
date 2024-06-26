@@ -1,3 +1,9 @@
+""" Bootstrapping Module
+
+This file contains a class with bootstrapping functions to assess error in PLR. 
+
+"""
+
 from pvplr.feature_correction import PLRProcessor
 from pvplr.model_comparison import PLRModel
 from pvplr.plr_determination import PLRDetermination
@@ -17,14 +23,19 @@ determination = PLRDetermination()
 
 class PLRBootstrap:
 
-    def __init__(self):
+    def __init__(
+        self
+    ):
         """
         Initialize PlRBootstrap Object
         """
 
         pass
 
-    def get_per_year(self, by):
+    def get_per_year(
+        self, 
+        by
+    ):
         """
         Helper function that returns the proper per_year number based on the time interval.
 
@@ -44,7 +55,16 @@ class PLRBootstrap:
         else:
             return 0  # Catches Errors
 
-    def pick_model(self, model, df, var_list, by, data_cutoff, pred, nameplate_power):
+    def pick_model(
+        self, 
+        model, 
+        df, 
+        var_list, 
+        by, 
+        data_cutoff, 
+        pred, 
+        nameplate_power
+    ):
         """
         Helper function that returns a DataFrame after the raw data goes through the correct model.
 
@@ -78,7 +98,12 @@ class PLRBootstrap:
         return res
 
     # Helper function that returns random fraction sample of data
-    def mbm_resample(self, df, fraction, by):
+    def mbm_resample(
+        self, 
+        df, 
+        fraction, 
+        by
+    ):
         """
         Helper function that returns a random fraction sample of data.
 
@@ -128,7 +153,20 @@ class PLRBootstrap:
         
         return re
             
-    def plr_bootstrap_uncertainty(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+    def plr_bootstrap_uncertainty(
+        self, 
+        df, 
+        n, 
+        fraction, 
+        var_list, 
+        model, 
+        by, 
+        power_var, 
+        time_var, 
+        data_cutoff, 
+        nameplate_power, 
+        pred
+    ):
         """
         Bootstraps raw data and puts it through modeling and PLR determination.
 
@@ -184,7 +222,20 @@ class PLRBootstrap:
         
         return result
 
-    def plr_bootstrap_output(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+    def plr_bootstrap_output(
+        self, 
+        df, 
+        n, 
+        fraction, 
+        var_list, 
+        model, 
+        by, 
+        power_var, 
+        time_var, 
+        data_cutoff, 
+        nameplate_power, 
+        pred
+    ):
         """
         First puts raw data through modeling and then bootstraps that data.
 
@@ -243,7 +294,17 @@ class PLRBootstrap:
 
         return fin
 
-    def plr_bootstrap_output_from_results(self, df, n, fraction, model, by, power_var, time_var, weight_var):
+    def plr_bootstrap_output_from_results(
+        self, 
+        df, 
+        n, 
+        fraction, 
+        model, 
+        by, 
+        power_var, 
+        time_var, 
+        weight_var
+    ):
         """
         Bootstraps the result after data went through power models.
 
@@ -293,5 +354,4 @@ class PLRBootstrap:
 
         return fin
 
-bootstrap = PLRBootstrap()
 

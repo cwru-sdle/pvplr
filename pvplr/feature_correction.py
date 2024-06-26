@@ -1,3 +1,9 @@
+""" Data Processing Module
+
+This file contains a class with functions for processing data both before and after power modeling
+
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,14 +12,23 @@ from sklearn.linear_model import LinearRegression
 
 class PLRProcessor:
 
-    def __init__(self):
+    def __init__(
+        self
+    ):
         """
         Initialize the PLRProcessor instance.
         """
 
         pass
     
-    def plr_build_var_list(self, time_var, power_var, irrad_var, temp_var, wind_var):
+    def plr_build_var_list(
+        self, 
+        time_var, 
+        power_var, 
+        irrad_var, 
+        temp_var, 
+        wind_var
+    ):
         """
         Builds a list of variables with appropriate labels.
 
@@ -37,7 +52,15 @@ class PLRProcessor:
         }
         return final
  
-    def plr_cleaning(self, df, var_list, irrad_thresh, low_power_thresh, high_power_cutoff, tmst_format="%Y-%m-%d %H:%M:%S"):
+    def plr_cleaning(
+        self,
+        df, 
+        var_list, 
+        irrad_thresh, 
+        low_power_thresh, 
+        high_power_cutoff, 
+        tmst_format="%Y-%m-%d %H:%M:%S"
+    ):
         """
         Removes data entries outside of irradiance and power cutoffs, fixes 
         timestamps to specified format, and converts columns to numeric when appropriate
@@ -89,7 +112,13 @@ class PLRProcessor:
 
         return dfc
 
-    def plr_saturation_removal(self, df, var_list, sat_limit=3000, power_thresh=0.99):
+    def plr_saturation_removal(
+        self, 
+        df, 
+        var_list, 
+        sat_limit=3000, 
+        power_thresh=0.99
+    ):
         """
         Remove data entries that are greater than the specified saturation limit.
 
@@ -107,7 +136,10 @@ class PLRProcessor:
         data = data[data[var_list['power_var']] <= float(str(sat_limit)) * power_thresh]
         return data
 
-    def plr_remove_outlier(self, df):
+    def plr_remove_outlier(
+        self, 
+        df
+    ):
         """
         Removes rows that are outliers
 
@@ -122,7 +154,19 @@ class PLRProcessor:
         res = df[df['outlier'] == False]
         return res
 
-    def plr_decomposition(self, data, by, freq, power_var, time_var, start_date, plot=False, plot_file=None, title=None, data_file=None):
+    def plr_decomposition(
+        self, 
+        data, 
+        by, 
+        freq, 
+        power_var, 
+        time_var, 
+        start_date, 
+        plot=False, 
+        plot_file=None, 
+        title=None, 
+        data_file=None
+    ):
         """
         Perform STL decomposition on time series power-predicted data.
 
