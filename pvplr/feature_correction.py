@@ -248,7 +248,10 @@ class PLRProcessor:
 
         return stl_data
     
-    def heatmap(self, df):
+    def heatmap(
+        self,
+        df
+    ):
         """
         Create a heatmap gradient of raw power values across the time of day 
 
