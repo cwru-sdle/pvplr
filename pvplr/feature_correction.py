@@ -280,7 +280,7 @@ class PLRProcessor:
         ax.set_yticklabels(['06:00', '12:00', '18:00'])
         ax.set_ylim(total_rows-1, 0)
         
-        plt.title('Raw Power Data Heatmap')
+        plt.title('Power Data Heatmap')
         plt.xlabel('Number of Days')
         plt.ylabel('Time of day')
 
