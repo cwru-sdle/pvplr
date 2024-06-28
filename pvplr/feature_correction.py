@@ -274,11 +274,12 @@ class PLRProcessor:
         ax.set_xticklabels(x_ticks)
         
         # Modify y-axis (Time of day)
-        time_ticks = pd.date_range("00:00", "23:59", freq="3h").time  # Every 3 hours
-        y_ticks = np.linspace(0, pivot_data.shape[0]-1, len(time_ticks))
+        total_rows = pivot_data.shape[0]
+        y_ticks = [total_rows * i // 4 for i in range(1, 4)]  # 3 ticks at 1/4, 2/4, and 3/4 of the axis
         ax.set_yticks(y_ticks)
-        ax.set_yticklabels([t.strftime('%H:%M') for t in time_ticks])
-
+        ax.set_yticklabels(['06:00', '12:00', '18:00'])
+        ax.set_ylim(total_rows-1, 0)
+        
         plt.title('Raw Power Data Heatmap')
         plt.xlabel('Number of Days')
         plt.ylabel('Time of day')
