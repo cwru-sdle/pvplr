@@ -1,15 +1,16 @@
 """ PLR Calculation Module
 
 This file contains a class with yoy and regression functions to calculate PLR values
-after data groes through power predictive modeling. 
+after data goes through power predictive modeling. 
 
 """
 
-#from pvplr.feature_correction import PLRProcessor
-#from pvplr.model_comparison import PLRModel
+from feature_correction import PLRProcessor
+from model_comparison import PLRModel
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import piecewise_regression
 import matplotlib.pyplot as plt
 
 class PLRDetermination:
@@ -233,4 +234,176 @@ class PLRDetermination:
                 return roc_df
             else:
                 return res
+    
+    def plr_piecewise(
+        self,
+        df, 
+        power_model,
+        n_breakpoints,
+        per_year, 
+        power_var, 
+        time_var, 
+        return_model = False,
+        plot = False
+    ):
+        """
+        Perform piecewise linear regression on the given data.
+
+        Parameters:
+        df (pd.DataFrame): Data frame of corrected power measurements
+        power_model (str): Name of Power Predictive Model used
+        n_breakpoints (int): Number of desired breakpoints
+        per_year (int): 365 for daily, 52 for weekly, 12 for monthly
+        power_var (str): Name of the power variable column
+        time_var (str): Name of the time variable column
+        return_model (bool): If True, return model summary stats; if False, return PLR results
+        plot (bool): If True, returns plot of piecewise linear power model
+
+        Returns:
+        dict: Results of the piecewise linear regression
+
+        Uses piecewise-regression package: https://joss.theoj.org/papers/10.21105/joss.03859
+        """
+
+        # Extract x and y
+        x = df[time_var].values
+        y = df[power_var].values
+
+        pw_fit = piecewise_regression.Fit(x, y, n_breakpoints=n_breakpoints)
+
+        # Total Modeling Summary Statistics
+        if return_model:
+            return pw_fit.summary()
+
+        if per_year == 12:
+            by = 'month'
+        if per_year == 52:
+            by = 'week'
+        if per_year == 365:
+            by = 'day'
+
+        # Create Pandas Dataframe for results
+        segments_data = pd.DataFrame(columns=['segment', 'seg_start', 'seg_end', 'slope', 'y-int', 'plr', 'plr_sd'])
+
+        results = pw_fit.get_results()
+        data = pw_fit.get_params()
+
+        # segment start and ending points
+        breakpoints = [v for k, v in data.items() if k.startswith('breakpoint')]
+        breakpoints.insert(0, 0)
+        breakpoints.append(x.max())
+
+        # slope
+        alphas = [v for k, v in data.items() if k.startswith('alpha')]
+        slope_err = []
+        for key, value in results['estimates'].items():
+            if key.startswith('alpha'):
+                slope_err.append(value['se'])
+
+        # y-int
+        y_int = results['estimates']['const']['estimate']
+        y_int_err = results['estimates']['const']['se']
+        
+        for i in range(len(breakpoints)-1):
+            segments_data.loc[i, 'segment'] = i + 1
+            segments_data.loc[i, 'seg_start'] = breakpoints[i]
+            segments_data.loc[i, 'seg_end'] = breakpoints[i + 1]
+            segments_data.loc[i, 'slope'] = alphas[i]
+            segments_data.loc[i, 'y-int'] = y_int
+            segments_data.loc[i, 'plr'] = ((alphas[i])/y_int) * 100 * per_year 
+            segments_data.loc[i, 'plr_sd'] = np.sqrt((per_year / y_int)**2 * slope_err[i] + ((-per_year * alphas[i]) / y_int**2)**2 * y_int_err)
+        
+        if plot:
+            self.plot_piecewise(time=x, power=y, pw_fit=pw_fit, power_model=power_model, by=by)
+
+        return segments_data
+    
+    def plot_model(
+        self, 
+        df, 
+        power_model, 
+        by
+    ):
+        """
+        Make a scatter plot of the power predictive model results along with PLR best fit line.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing the model data.
+            power_model (str): Name of the power model being plotted.
+            by (str): Time unit for x-axis ('day', 'week', 'month').
+        """
+
+        df = pd.DataFrame(df)
+        time = df.index.to_list()
+        power = df['power_var']
+
+        if by == 'day':
+            per_year = 365
+        if by == 'week':
+            per_year = 52
+        if by == 'month':
+            per_year = 12
+
+        # PLR Calculation with Weighted Regression
+        plr_df = self.plr_weighted_regression(data=df, power_var='power_var', time_var='time_var', model=power_model, per_year=per_year, weight_var='sigma')
+        print(plr_df)
+        slope = plr_df['slope'].item()
+        y_int = plr_df['y-int'].item()
+
+        # Plotting
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.set_facecolor('#eee6ff')
+        ax.scatter(time, power, color='#0000b3', label='Predicted Power data')
+        ax.plot(time, [t*slope + y_int for t in range(len(time))], color='black', label='PLR best-fit line')
+        ax.set_ylim(0.8*min(power), 1.2*max(power))
+        ax.set_xticks(np.linspace(0,max(time),10)//1)
+        
+        ax.grid(True, linestyle='-', linewidth=2, alpha=0.5, color='white')
+        ax.set_xlabel(f"Time (in {by}s)")
+        ax.set_ylabel('Power (in kilowatts)')
+        ax.legend()
+        plt.title(f"{power_model} Power Predictive Model Results")
+        plt.tight_layout()
+        plt.show()
+
+    def plot_piecewise(
+        self,
+        time,
+        power,
+        pw_fit,
+        power_model,
+        by,
+    ):
+        """
+        Make a scatter plot of the power predictive model results along with piecewise PLR best fit lines.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing the model data.
+            time (array): Array of time values
+            power (array): Array of power values
+            pw_fit (piecewise_regression object): piecewise_regression results object
+            power_model: (str): Name of the power model being plotted.
+            by (str): Time unit for x-axis ('day', 'week', 'month').
+        """
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.set_facecolor('#eee6ff')
+        
+        plt.sca(ax)
+        pw_fit.plot_data(color='#0000b3', s=20, label="Decomposed Power Data")
+        pw_fit.plot_fit(color="black", linewidth=1, label="PLR best-fit line")
+        pw_fit.plot_breakpoints()
+        pw_fit.plot_breakpoint_confidence_intervals()
+        
+        ax.grid(True, linestyle='-', linewidth=2, alpha=0.5, color='white')
+        ax.set_xlabel(f"Time (in {by}s)")
+        ax.set_ylabel("Power (in kW)")
+        ax.set_ylim(0.8*min(power), 1.2*max(power))
+        ax.set_xticks(np.linspace(0, max(time), 10)//1)
+        ax.legend()
+
+        plt.title(f"{power_model} Power Predictive Model Results with Piecewise PLR")
+        plt.tight_layout()
+        plt.show()
+
 

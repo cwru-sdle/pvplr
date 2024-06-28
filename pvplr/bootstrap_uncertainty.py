@@ -4,9 +4,9 @@ This file contains a class with bootstrapping functions to assess error in PLR.
 
 """
 
-from pvplr.feature_correction import PLRProcessor
-from pvplr.model_comparison import PLRModel
-from pvplr.plr_determination import PLRDetermination
+from feature_correction import PLRProcessor
+from model_comparison import PLRModel
+from plr_determination import PLRDetermination
 import matplotlib.pyplot as plt
 from scipy.stats import t
 import pandas as pd

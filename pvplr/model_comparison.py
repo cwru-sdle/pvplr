@@ -1,11 +1,11 @@
 """ Power Predictive Module
 
 This file contains a class with functions for modeling PV data after data filtering. 
-There are four types of models - Xbx, Xbx-UTC, PVUSA, and 6k (this one is not used due)
+There are four types of models - Xbx, Xbx-UTC, PVUSA, and 6k (this one is not used)
 
 """
 
-# from pvplr.feature_correction import PLRProcessor
+from feature_correction import PLRProcessor
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -13,6 +13,8 @@ from scipy.optimize import curve_fit
 from sklearn import linear_model
 from sklearn.metrics import r2_score, mean_squared_error
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from datetime import datetime, timedelta
 
 class PLRModel: 
     
@@ -605,3 +607,40 @@ class PLRModel:
         return res_dfs
 
         '''
+    
+    def plot_model(
+        self, 
+        df, 
+        power_model,
+        by
+    ):
+        """
+        Make a scatter plot of the power predictive model results.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing the model data.
+            power_model (str): Name of the power model being plotted.
+            by (str): Time unit for x-axis ('day', 'week', 'month').
+        """
+
+        df = pd.DataFrame(df)
+        time = df.index.to_list()
+        power = df['power_var']
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.set_facecolor('#eee6ff')
+        ax.scatter(time, power, color='#0000b3')
+        ax.set_ylim(0.8*min(power), 1.2*max(power))
+        ax.set_xticks(np.linspace(0,max(time),10)//1)     
+
+        # Add grid
+        ax.grid(True, linestyle='-', linewidth=2, alpha=0.5, color='white')
+        
+        ax.set_xlabel(f"Time in ({by})")
+        ax.set_ylabel('Power (in kilowatts)')
+        plt.title(f"{power_model} Power Predictive Model Results")
+        
+        # Show the plot
+        plt.tight_layout()
+        plt.show()
+        

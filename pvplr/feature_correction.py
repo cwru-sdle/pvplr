@@ -6,9 +6,10 @@ This file contains a class with functions for processing data both before and af
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from statsmodels.tsa.seasonal import STL
 from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 class PLRProcessor:
 
@@ -173,7 +174,7 @@ class PLRProcessor:
         Args:
             data (pd.DataFrame): Input data that went through power modeling already.
             by (string): 'D' for daily, 'W' for weekly, 'M' for monthly
-            freq (int): Frequency of the time series (usually 4).
+            freq (int): Seasonality (usually 4).
             power_var (str): Name of the column containing power data.
             time_var (str): Name of the column containing time data.
             start_date (str): Start date of the time series in timestamp format.
@@ -226,7 +227,7 @@ class PLRProcessor:
             plt.figure(figsize=(10, 6))
             plt.scatter(stl_data['age'], stl_data['raw'], c='blue', alpha=0.5)
             plt.scatter(stl_data['age'], stl_data['trend'], c='red')
-            plt.ylim(0.9 * stl_data['raw'].min(), 1.1 * stl_data['raw'].max())
+            plt.ylim(0.8 * stl_data['raw'].min(), 1.2 * stl_data['raw'].max())
             plt.xlabel(f'Age (Pseudo {by})')
             plt.ylabel('Predicted Power (KW) Trend')
             plt.title(title)
@@ -246,3 +247,41 @@ class PLRProcessor:
             stl_data.to_csv(data_file, index=False)
 
         return stl_data
+    
+    def heatmap(self, df):
+        """
+        Create a heatmap gradient of raw power values across the time of day 
+
+        Args:
+            df (pd.DataFrame): Timeseries dataframe with power data
+        """
+
+        df['tmst'] = pd.to_datetime(df['tmst'], errors='coerce')
+        df['time_of_day'] = df['tmst'].dt.time
+        df['day_number'] = (df['tmst'] - df['tmst'].min()).dt.days
+
+        # Pivot the data
+        pivot_data = df.pivot(index='time_of_day', columns='day_number', values='idcp')
+
+        # Create the heatmap
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(pivot_data, cmap='YlOrRd', cbar_kws={'label': 'Power (kW)'})
+
+        # Modify x-axis (Number of Days)
+        num_days = pivot_data.shape[1]
+        x_ticks = np.linspace(0, num_days-1, 10, dtype=int)  # 10 ticks
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(x_ticks)
+        
+        # Modify y-axis (Time of day)
+        time_ticks = pd.date_range("00:00", "23:59", freq="3h").time  # Every 3 hours
+        y_ticks = np.linspace(0, pivot_data.shape[0]-1, len(time_ticks))
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels([t.strftime('%H:%M') for t in time_ticks])
+
+        plt.title('Raw Power Data Heatmap')
+        plt.xlabel('Number of Days')
+        plt.ylabel('Time of day')
+
+        plt.tight_layout()
+        plt.show()
