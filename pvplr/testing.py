@@ -108,7 +108,7 @@ for lat, lon, tz, plr, cluster_size, site_age in sites:
             pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer']}
 
 
-    index = pd.date_range("2010-01-01", periods=87600, freq = "H", tz = tz)
+    index = pd.date_range("2010-01-01", periods=87600, freq = "h", tz = tz)
 
     loc_pos = str(lat) +str(lon)
 
@@ -120,16 +120,10 @@ for lat, lon, tz, plr, cluster_size, site_age in sites:
         weather, metadata = pvlib.iotools.get_psm3(location.latitude, location.longitude, nrel_api_key, "rxw497@case.edu", map_variables= True)
         print('Weather---------------------------')
         print(weather)
-        zero_ghi_count = (weather['ghi'] == 0).sum()
-        # Print the result
-        print(f"Number of rows where GHI is 0: {zero_ghi_count}")
-
-        non_zero_ghi_df = weather[weather['ghi'] != 0]
-        print(non_zero_ghi_df)
-
 
         system = PVSystem(surface_tilt=35, surface_azimuth=180,module_parameters=sandia_module,inverter_parameters=cec_inverter,temperature_model_parameters=temperature_model_parameters, albedo=weather['albedo'])
-
+        print(system)
+        
         mc = ModelChain.with_pvwatts(system, location) 
 
         #Model
