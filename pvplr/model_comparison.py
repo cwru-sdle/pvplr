@@ -244,7 +244,7 @@ class PLRModel:
         ) [['time_var', 'power_var', 'std_error', 'sigma', 'outlier']]
 
         return res_dfs
-    
+        
     def plr_xbx_utc_model(
         self, 
         df, 
@@ -480,133 +480,6 @@ class PLRModel:
         )[['time_var', 'power_var', 'std_error', 'sigma', 'outlier']]
 
         return res_dfs
-    
-    '''
-    def plr_6k_model(
-        self, 
-        df, 
-        var_list, 
-        by, 
-        nameplate_power, 
-        data_cutoff,
-        predict_data
-    ):
-        """
-        6k - groups data by time interval and performs a linear regression according to the formula:
-          power_var ~ irrad_var/istc * (nameplate_power + a*log(irrad_var/istc) 
-                                                        + b*log(irrad_var/istc)^2 
-                                                        + c*(temp_var - tref) 
-                                                        + d*(temp_var - tref)*log(irrad_var/istc) 
-                                                        + e*(temp_var - tref)*log(irrad_var/istc)^2 
-                                                        + f*(temp_var - tref)^2)
-
-        Args:
-            df (pd.DataFrame): The input DataFrame.
-            var_list (dict): A dictionary containing the variable names.
-            by (str): The time interval to group the data by ('month', 'week', 'day'). 
-            nameplate_power (int): The rated power capability of the system, in watts.
-            data_cutoff (int): The minimum number of data points required for each time period.
-            predict_data (pd.DataFrame): The DataFrame containing the predict data.
-
-        Returns:
-            pd.DataFrame: The resulting DataFrame with the PVUSA model predictions and metrics.
-        """
-
-        # initialize dataframes from helper function above
-        model_df = self.model_initialization(df=df, var_list=var_list, by=by)
-
-        # get predicted data from helper function above
-        pred = self.generate_predicted_data(model_df=model_df, var_list=var_list, predict_data=predict_data)
-
-        # determine number of data points for each time period
-        n = model_df.groupby("tvar").size().reset_index(name="n")
-
-        res_dfs = []
-        split_var = 'tvar'
-
-        # Iterate over each group in the DataFrame
-        groups = model_df.groupby(split_var).groups
-        grouped_dfs = [model_df.loc[group] for group in groups.values()]
-
-        # Iterating variables
-        start = 0
-        end = n["n"][0]
-
-        # Constants
-        istc = 1000
-        tref = pred['temp_var']
-
-        def model_6k(x, c1, c2, c3, c4, c5, c6, name_power=nameplate_power):
-            irrad_var, temp_var, tref = x
-            istc = 1000  # Assuming istc is a constant value
-            return irrad_var / istc * (name_power +
-                                        c1 * np.log(irrad_var / istc) +
-                                        c2 * np.log(irrad_var / istc) ** 2 +
-                                        c3 * (temp_var - tref) +
-                                        c4 * (temp_var - tref) * np.log(irrad_var / istc) +
-                                        c5 * (temp_var - tref) * np.log(irrad_var / istc) ** 2 +
-                                        c6 * (temp_var - tref) ** 2)
-
-        for i, df in enumerate(grouped_dfs, start=0):
-            mod = model_df[start:end]
-            start = end
-            end = end + n["n"][i]
-
-            irrad_var = mod['irrad_var'].values
-            temp_var = mod['temp_var'].values
-            
-            x_data = np.array([irrad_var, temp_var, np.full(mod['temp_var'].shape, tref[i])])
-            power_var = mod['power_var'].values
-            y_data = np.array(power_var)
-            
-            p0 = [0.6, 0.1, -0.05, -0.05, -0.005, 0.001]
-            popt, pcov = curve_fit(model_6k, x_data, y_data, p0=p0, maxfev=200)
-            
-            c1, c2, c3, c4, c5, c6 = popt
-
-            # Create predicted values array with the same size as mod array
-            x_pred = np.array([pred['irrad_var'][i], pred['temp_var'][i], pred['temp_var'][i]])
-            y_pred = np.zeros_like(y_data)
-            for j in range(len(y_data)):
-                y_pred[j] = model_6k(x_data[:, j], c1, c2, c3, c4, c5, c6)
-            
-            r_2 = r2_score(y_data, y_pred)
-            adj_r2 = 1 - (1 - r_2) * (len(y_data) - 1) / (len(y_data) - len(popt) - 1)        
-            mse = np.mean((y_data - y_pred) ** 2)
-            
-            res_df = pd.DataFrame({
-                'tvar': mod['tvar'].iloc[0],
-                'prediction': y_pred.mean(),
-                'r_squared': r_2,
-                'adj_r_squared': adj_r2,
-                'mse': mse,
-            }, index=[0])
-
-            res_dfs.append(res_df)
-
-        res_dfs = pd.concat(res_dfs, ignore_index=True)
-        res_dfs = pd.merge(res_dfs, n, on='tvar', how='left')
-        res_dfs['std_error'] = np.sqrt(res_dfs['mse']) / np.sqrt(res_dfs['n'])
-
-        res_dfs = res_dfs[res_dfs['n'] >= data_cutoff]
-        res_dfs['tvar'] = pd.to_numeric(res_dfs['tvar'])
-
-        fitted_values = res_dfs['prediction']
-        iqr = stats.iqr(fitted_values)
-        lower = np.quantile(fitted_values, 0.25) - 1.5 * iqr
-        upper = np.quantile(fitted_values, 0.75) + 1.5 * iqr
-
-        res_dfs['outlier'] = res_dfs['prediction'].apply(lambda x: (x > upper) | (x < lower))
-
-        res_dfs = res_dfs.assign(
-            time_var=res_dfs['tvar'],
-            power_var=res_dfs['prediction'],
-            sigma=res_dfs['std_error'] * np.sqrt(res_dfs['n']),
-        )[['time_var', 'power_var', 'std_error', 'sigma', 'outlier']]
-
-        return res_dfs
-
-        '''
     
     def plot_model(
         self, 

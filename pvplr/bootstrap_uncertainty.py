@@ -63,7 +63,6 @@ class PLRBootstrap:
         by, 
         data_cutoff, 
         pred, 
-        nameplate_power
     ):
         """
         Helper function that returns a DataFrame after the raw data goes through the correct model.
@@ -75,7 +74,6 @@ class PLRBootstrap:
             by (str): The time interval for grouping the data.
             data_cutoff (int): The minimum number of data points required for each time period.
             pred (pd.DataFrame): The DataFrame containing the predicted data.
-            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
 
         Returns:
             pd.DataFrame: The resulting DataFrame after applying the specified model.
@@ -90,8 +88,6 @@ class PLRBootstrap:
             res = model_comparison.plr_xbx_utc_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
         elif model == "pvusa":
             res = model_comparison.plr_pvusa_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-        elif model == "6k":
-            res = model_comparison.plr_6k_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, nameplate_power=nameplate_power, predict_data=pred)
         else:
             raise ValueError("Error: model not recognized. See method documentation for plr_bootstrap_uncertainty")
         
@@ -164,7 +160,6 @@ class PLRBootstrap:
         power_var, 
         time_var, 
         data_cutoff, 
-        nameplate_power, 
         pred
     ):
         """
@@ -180,7 +175,6 @@ class PLRBootstrap:
             power_var (str): The name of the power variable column.
             time_var (str): The name of the time variable column.
             data_cutoff (int): The minimum number of data points required for each time period.
-            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
             pred (pd.DataFrame): The DataFrame containing the predicted data.
 
         Returns:
@@ -192,7 +186,7 @@ class PLRBootstrap:
         roc_df = pd.DataFrame(columns=['reg', 'yoy'])
         for i in range(n):
             df_sub = self.mbm_resample(df=df, fraction=fraction, by=by)
-            res = self.pick_model(model=model, df=df_sub, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred, nameplate_power=nameplate_power)
+            res = self.pick_model(model=model, df=df_sub, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred)
 
             if model == '6k':
                 res['weight'] = 1
@@ -233,7 +227,6 @@ class PLRBootstrap:
         power_var, 
         time_var, 
         data_cutoff, 
-        nameplate_power, 
         pred
     ):
         """
@@ -249,14 +242,13 @@ class PLRBootstrap:
             power_var (str): The name of the power variable column.
             time_var (str): The name of the time variable column.
             data_cutoff (int): The minimum number of data points required for each time period.
-            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
             pred (pd.DataFrame): The DataFrame containing the predicted data.
 
         Returns:
             pd.DataFrame: The resulting DataFrame with PLR and error estimates.
         """
 
-        mod_res = self.pick_model(model=model, df=df, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred, nameplate_power=nameplate_power)
+        mod_res = self.pick_model(model=model, df=df, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred)
 
         if model == '6k':
             mod_res['sigma'] = 1
