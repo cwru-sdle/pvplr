@@ -1,7 +1,16 @@
+""" Auto-Download Module
+
+This function downloads RTC power data from the OSF database. 
+
+"""
+
 import requests
 import os
 
-def RTC_download(output_file, output_dir):
+def RTC_download(
+    output_file, 
+    output_dir
+):
     """
     Helper function that downloads CSV file from OSF Database
 
@@ -20,6 +29,3 @@ def RTC_download(output_file, output_dir):
         file.write(response.content)
 
     print(f"CSV file downloaded as {output_file}")
-
-# Example
-# RTC_download('lwcb907.csv', '/home/ssk213/CSE_MSE_RXF131/cradle-members/sdle/ssk213/git/pvplr-suraj-2')

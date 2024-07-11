@@ -1,6 +1,12 @@
-from pvplr.feature_correction import PLRProcessor
-from pvplr.model_comparison import PLRModel
-from pvplr.plr_determination import PLRDetermination
+""" Bootstrapping Module
+
+This file contains a class with bootstrapping functions to assess error in PLR. 
+
+"""
+
+from feature_correction import PLRProcessor
+from model_comparison import PLRModel
+from plr_determination import PLRDetermination
 import matplotlib.pyplot as plt
 from scipy.stats import t
 import pandas as pd
@@ -17,14 +23,19 @@ determination = PLRDetermination()
 
 class PLRBootstrap:
 
-    def __init__(self):
+    def __init__(
+        self
+    ):
         """
         Initialize PlRBootstrap Object
         """
 
         pass
 
-    def get_per_year(self, by):
+    def get_per_year(
+        self, 
+        by
+    ):
         """
         Helper function that returns the proper per_year number based on the time interval.
 
@@ -44,7 +55,15 @@ class PLRBootstrap:
         else:
             return 0  # Catches Errors
 
-    def pick_model(self, model, df, var_list, by, data_cutoff, pred, nameplate_power):
+    def pick_model(
+        self, 
+        model, 
+        df, 
+        var_list, 
+        by, 
+        data_cutoff, 
+        pred, 
+    ):
         """
         Helper function that returns a DataFrame after the raw data goes through the correct model.
 
@@ -55,7 +74,6 @@ class PLRBootstrap:
             by (str): The time interval for grouping the data.
             data_cutoff (int): The minimum number of data points required for each time period.
             pred (pd.DataFrame): The DataFrame containing the predicted data.
-            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
 
         Returns:
             pd.DataFrame: The resulting DataFrame after applying the specified model.
@@ -70,15 +88,18 @@ class PLRBootstrap:
             res = model_comparison.plr_xbx_utc_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
         elif model == "pvusa":
             res = model_comparison.plr_pvusa_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, predict_data=pred)
-        elif model == "6k":
-            res = model_comparison.plr_6k_model(df, var_list=var_list, by=by, data_cutoff=data_cutoff, nameplate_power=nameplate_power, predict_data=pred)
         else:
             raise ValueError("Error: model not recognized. See method documentation for plr_bootstrap_uncertainty")
         
         return res
 
     # Helper function that returns random fraction sample of data
-    def mbm_resample(self, df, fraction, by):
+    def mbm_resample(
+        self, 
+        df, 
+        fraction, 
+        by
+    ):
         """
         Helper function that returns a random fraction sample of data.
 
@@ -128,7 +149,19 @@ class PLRBootstrap:
         
         return re
             
-    def plr_bootstrap_uncertainty(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+    def plr_bootstrap_uncertainty(
+        self, 
+        df, 
+        n, 
+        fraction, 
+        var_list, 
+        model, 
+        by, 
+        power_var, 
+        time_var, 
+        data_cutoff, 
+        pred
+    ):
         """
         Bootstraps raw data and puts it through modeling and PLR determination.
 
@@ -142,7 +175,6 @@ class PLRBootstrap:
             power_var (str): The name of the power variable column.
             time_var (str): The name of the time variable column.
             data_cutoff (int): The minimum number of data points required for each time period.
-            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
             pred (pd.DataFrame): The DataFrame containing the predicted data.
 
         Returns:
@@ -154,7 +186,7 @@ class PLRBootstrap:
         roc_df = pd.DataFrame(columns=['reg', 'yoy'])
         for i in range(n):
             df_sub = self.mbm_resample(df=df, fraction=fraction, by=by)
-            res = self.pick_model(model=model, df=df_sub, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred, nameplate_power=nameplate_power)
+            res = self.pick_model(model=model, df=df_sub, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred)
 
             if model == '6k':
                 res['weight'] = 1
@@ -184,7 +216,19 @@ class PLRBootstrap:
         
         return result
 
-    def plr_bootstrap_output(self, df, n, fraction, var_list, model, by, power_var, time_var, data_cutoff, nameplate_power, pred):
+    def plr_bootstrap_output(
+        self, 
+        df, 
+        n, 
+        fraction, 
+        var_list, 
+        model, 
+        by, 
+        power_var, 
+        time_var, 
+        data_cutoff, 
+        pred
+    ):
         """
         First puts raw data through modeling and then bootstraps that data.
 
@@ -198,14 +242,13 @@ class PLRBootstrap:
             power_var (str): The name of the power variable column.
             time_var (str): The name of the time variable column.
             data_cutoff (int): The minimum number of data points required for each time period.
-            nameplate_power (float): The nameplate power of the system (only used for the '6k' model).
             pred (pd.DataFrame): The DataFrame containing the predicted data.
 
         Returns:
             pd.DataFrame: The resulting DataFrame with PLR and error estimates.
         """
 
-        mod_res = self.pick_model(model=model, df=df, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred, nameplate_power=nameplate_power)
+        mod_res = self.pick_model(model=model, df=df, var_list=var_list, by=by, data_cutoff=data_cutoff, pred=pred)
 
         if model == '6k':
             mod_res['sigma'] = 1
@@ -243,7 +286,17 @@ class PLRBootstrap:
 
         return fin
 
-    def plr_bootstrap_output_from_results(self, df, n, fraction, model, by, power_var, time_var, weight_var):
+    def plr_bootstrap_output_from_results(
+        self, 
+        df, 
+        n, 
+        fraction, 
+        model, 
+        by, 
+        power_var, 
+        time_var, 
+        weight_var
+    ):
         """
         Bootstraps the result after data went through power models.
 
@@ -293,5 +346,4 @@ class PLRBootstrap:
 
         return fin
 
-bootstrap = PLRBootstrap()
 

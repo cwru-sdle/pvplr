@@ -1,17 +1,35 @@
+""" Data Processing Module
+
+This file contains a class with functions for processing data both before and after power modeling
+
+"""
+from SDT_data_handler import DataHandler
 import pandas as pd
 import numpy as np
+from statsmodels.tsa.seasonal import STL
+from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 class PLRProcessor:
 
-    def __init__(self):
+    def __init__(
+        self
+    ):
         """
         Initialize the PLRProcessor instance.
         """
 
         pass
     
-    def plr_build_var_list(self, time_var, power_var, irrad_var, temp_var, wind_var):
+    def plr_build_var_list(
+        self, 
+        time_var, 
+        power_var, 
+        irrad_var, 
+        temp_var, 
+        wind_var
+    ):
         """
         Builds a list of variables with appropriate labels.
 
@@ -35,7 +53,15 @@ class PLRProcessor:
         }
         return final
  
-    def plr_cleaning(self, df, var_list, irrad_thresh, low_power_thresh, high_power_cutoff, tmst_format="%Y-%m-%d %H:%M:%S"):
+    def plr_cleaning(
+        self,
+        df, 
+        var_list, 
+        irrad_thresh, 
+        low_power_thresh, 
+        high_power_cutoff, 
+        tmst_format="%Y-%m-%d %H:%M:%S"
+    ):
         """
         Removes data entries outside of irradiance and power cutoffs, fixes 
         timestamps to specified format, and converts columns to numeric when appropriate
@@ -87,7 +113,13 @@ class PLRProcessor:
 
         return dfc
 
-    def plr_saturation_removal(self, df, var_list, sat_limit=3000, power_thresh=0.99):
+    def plr_saturation_removal(
+        self, 
+        df, 
+        var_list, 
+        sat_limit=3000, 
+        power_thresh=0.99
+    ):
         """
         Remove data entries that are greater than the specified saturation limit.
 
@@ -105,7 +137,10 @@ class PLRProcessor:
         data = data[data[var_list['power_var']] <= float(str(sat_limit)) * power_thresh]
         return data
 
-    def plr_remove_outlier(self, df):
+    def plr_remove_outlier(
+        self, 
+        df
+    ):
         """
         Removes rows that are outliers
 
@@ -119,6 +154,138 @@ class PLRProcessor:
         df = pd.DataFrame(df)
         res = df[df['outlier'] == False]
         return res
-    
 
+    def plr_decomposition(
+        self, 
+        data, 
+        by, 
+        freq, 
+        power_var, 
+        time_var, 
+        start_date, 
+        plot=False, 
+        plot_file=None, 
+        title=None, 
+        data_file=None
+    ):
+        """
+        Perform STL decomposition on time series power-predicted data.
+
+        Args:
+            data (pd.DataFrame): Input data that went through power modeling already.
+            by (string): 'D' for daily, 'W' for weekly, 'M' for monthly
+            freq (int): Seasonality (usually 4).
+            power_var (str): Name of the column containing power data.
+            time_var (str): Name of the column containing time data.
+            start_date (str): Start date of the time series in timestamp format.
+            plot (bool, optional): Whether to create a plot. Defaults to False.
+            plot_file (str, optional): File path to save the plot. Defaults to None.
+            title (str, optional): Title for the plot. Defaults to None.
+            data_file (str, optional): File path to save the processed data. Defaults to None.
+
+        Returns:
+            pd.DataFrame: Processed and decomposed data.
+        """
+
+        data = pd.DataFrame(data)
+        total_age = range(1, int(data[time_var].max()) + 1)  
+        power_sum = pd.DataFrame({'total_age': total_age})
+
+        # Add corresponding power and sigma values to power_sum dataframe
+        for j in power_sum['total_age']:
+            if j in data[time_var].values:
+                mask = data[time_var] == j
+                power_sum.loc[j-1, 'power'] = data.loc[mask, power_var].values[0]
+                power_sum.loc[j-1, 'sigma'] = data.loc[mask, 'sigma'].values[0]
+            else:
+                power_sum.loc[j-1, 'power'] = None
+                power_sum.loc[j-1, 'sigma'] = None
+
+        # Remove NAs at the start and end
+        power_sum = power_sum.dropna(subset=['power'])
+
+        # Define time series object of the predicted power
+        ts_power = pd.Series(power_sum['power'].values, index=pd.date_range(start=start_date, periods=len(power_sum), freq=by))
+
+        # STL decomposition
+        stl_result = STL(ts_power, period=freq).fit()
+
+        # Create DataFrame with decomposition results
+        stl_data = pd.DataFrame({
+            'raw': ts_power,
+            'trend': stl_result.trend,
+            'seasonal': stl_result.seasonal,
+            'residual': stl_result.resid
+        })
+
+        stl_data['interpolated'] = stl_data['raw'].isna()
+        stl_data['age'] = range(1, len(stl_data) + 1)
+        stl_data['sigma'] = power_sum['sigma'].values
+        stl_data['power'] = np.where(stl_data['interpolated'], np.nan, stl_data['trend'])
+
+        if plot:
+            plt.figure(figsize=(10, 6))
+            plt.scatter(stl_data['age'], stl_data['raw'], c='blue', alpha=0.5)
+            plt.scatter(stl_data['age'], stl_data['trend'], c='red')
+            plt.ylim(0.8 * stl_data['raw'].min(), 1.2 * stl_data['raw'].max())
+            plt.xlabel(f'Age (Pseudo {by})')
+            plt.ylabel('Predicted Power (KW) Trend')
+            plt.title(title)
+            plt.savefig(plot_file)
+            plt.close()
+
+        reg = LinearRegression()
+        reg.fit(stl_data['power'].values.reshape(-1,1), stl_data['age'].values.reshape(-1,1), sample_weight=1/stl_data['sigma'])
+        m = reg.coef_[0]
+        c = reg.intercept_
+
+        # Rate of Change is slope/intercept converted to %/year
+        roc = (m / c) * 12 * 100
+        print(f'Calculated PLR for decomposed data: {roc.item():.5f}')
+
+        if data_file:
+            stl_data.to_csv(data_file, index=False)
+
+        return stl_data
     
+    def heatmap(
+        self,
+        df
+    ):
+        """
+        Create a heatmap gradient of raw power values across the time of day 
+
+        Args:
+            df (pd.DataFrame): Timeseries dataframe with power data
+        """
+
+        df['tmst'] = pd.to_datetime(df['tmst'], errors='coerce')
+        df['time_of_day'] = df['tmst'].dt.time
+        df['day_number'] = (df['tmst'] - df['tmst'].min()).dt.days
+
+        # Pivot the data
+        pivot_data = df.pivot(index='time_of_day', columns='day_number', values='idcp')
+
+        # Create the heatmap
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(pivot_data, cmap='YlOrRd', cbar_kws={'label': 'Power (kW)'})
+
+        # Modify x-axis (Number of Days)
+        num_days = pivot_data.shape[1]
+        x_ticks = np.linspace(0, num_days-1, 10, dtype=int)  # 10 ticks
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(x_ticks)
+        
+        # Modify y-axis (Time of day)
+        total_rows = pivot_data.shape[0]
+        y_ticks = [total_rows * i // 4 for i in range(1, 4)]  # 3 ticks at 1/4, 2/4, and 3/4 of the axis
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(['06:00', '12:00', '18:00'])
+        ax.set_ylim(total_rows-1, 0)
+        
+        plt.title('Power Data Heatmap')
+        plt.xlabel('Number of Days')
+        plt.ylabel('Time of day')
+
+        plt.tight_layout()
+        plt.show()
