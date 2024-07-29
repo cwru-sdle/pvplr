@@ -11,6 +11,10 @@ dependencies = [
     'scipy']
 license = { text = "BSD-2-Clause" }
 version = "2024.06.12"
+description = "PV PLR analysis"
+readme = "README.md"
 
 [tool.setuptools.packages.find]
 include = ["pvplr*"]
+
+[tool.setuptools_scm]
