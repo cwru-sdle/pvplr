@@ -10,7 +10,7 @@ dependencies = [
     'matplotlib',
     'scipy']
 license = { text = "BSD-2-Clause" }
-version = "2024.06.12"
+version = "2024.07.29"
 description = "PV PLR analysis"
 readme = "README.md"
 
