@@ -12,8 +12,5 @@ dependencies = [
 license = { text = "BSD-2-Clause" }
 version = "2024.06.12"
 
-#[tool.setuptools]
-#py-modules = ['pvplr']
-
 [tool.setuptools.packages.find]
 include = ["pvplr*"]
