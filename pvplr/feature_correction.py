@@ -3,7 +3,8 @@
 This file contains a class with functions for processing data both before and after power modeling
 
 """
-from SDT_data_handler import DataHandler
+#from SDT_data_handler import DataHandler
+from solardatatools import DataHandler
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.seasonal import STL

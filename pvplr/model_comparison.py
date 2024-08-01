@@ -5,7 +5,7 @@ There are four types of models - Xbx, Xbx-UTC, PVUSA, and 6k (this one is not us
 
 """
 
-from feature_correction import PLRProcessor
+#from pvplr.feature_correction import PLRProcessor
 import pandas as pd
 import numpy as np
 from scipy import stats
