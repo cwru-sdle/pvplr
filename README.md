@@ -5,3 +5,6 @@ This material is based upon work supported by the U.S Department of Energy's Off
 
 # Authors
 Alan Curran, Suraj Kumar, Raymond Wieser, Ben Pierce, Tyler Burleyson, William Oltjen, Sascha Lindig, David Moser, Roger French, Solar Durability and Lifetime Extension research center
+
+# Install
+`pip install pvplr`
