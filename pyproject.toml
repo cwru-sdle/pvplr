@@ -8,7 +8,13 @@ dependencies = [
     'numpy',
     'pandas',
     'matplotlib',
-    'scipy']
+    'scipy',
+    'solar-data-tools',
+    'piecewise_regression',
+    'scikit-learn',
+    'scipy',
+    'statsmodels',
+    'seaborn']
 license = { text = "BSD-2-Clause" }
 version = "2024.07.29"
 description = "PV PLR analysis"
